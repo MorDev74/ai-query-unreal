@@ -1,0 +1,35 @@
+generator client {
+    provider = "prisma-client-js"
+    previewFeatures = ["postgresqlExtensions"]
+}
+ 
+datasource db {
+    provider = "postgresql"
+    url = env("POSTGRES_PRISMA_URL")              // Uses connection pooling
+    directUrl = env("POSTGRES_URL_NON_POOLING")   // Uses direct connection, ⚠️ make sure to keep this to `POSTGRES_URL_NON_POOLING`, or you'll have dangling databases from migrations
+    extensions = [vector]
+}
+
+model UnrealRagResources {
+    id          String                  @id @default(cuid())
+    tag         String
+    content     String
+    createAt    DateTime                @default(now())
+    updateAt    DateTime                @default(now()) @updatedAt
+    embeddings  UnrealRagEmbeddings[]
+
+    @@map("unreal_rag_resources") 
+}
+
+model UnrealRagEmbeddings {
+    id          String                  @id @default(cuid())
+    resourceId  String
+    tag         String
+    content     String
+    embedding   Unsupported("vector(1536)")?
+    // embedding   number[]
+    resource    UnrealRagResources      @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+    @@map("unreal_rag_embeddings")
+    @@index([embedding], type: Gist)
+}
