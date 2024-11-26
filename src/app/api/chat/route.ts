@@ -1,5 +1,3 @@
-"use server"
-
 // import { prisma } from "@/_lib/db/client";
 // import { openai } from '@ai-sdk/openai';
 // import { google } from '@ai-sdk/google';

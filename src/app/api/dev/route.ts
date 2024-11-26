@@ -1,5 +1,3 @@
-"use server"
-
 import { seedResource } from "@/_lib/ai/resources";
 
 export async function GET(req: Request) {
