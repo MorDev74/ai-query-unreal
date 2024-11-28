@@ -1,11 +1,10 @@
 "use client"
 
 import { useState } from "react";
-import { querySimilarity } from "@/_lib/actions/QuerySimilarity";
+import { querySimilarity } from "@/_lib/actions/query-similarity";
 import { RadioGroup } from "@/components/RadioGroup";
 import { AssistantMessage } from "@/components/AssistantMessage";
 import { QueryExamples } from "@/components/Examples";
-import { handleClientScriptLoad } from "next/script";
 
 const optionList = [
   { value: "ConsoleVariables", enabled: true, },
