@@ -1,46 +1,55 @@
 "use server"
+
+import cuid from "cuid";
 import fs from "fs";
 import path from "path";
-import { prisma } from "@/_lib/db/client";
+import { sql } from '@vercel/postgres';
 import { generateEmbeddings } from "@/_lib/ai/embedding";
 
 type resourceTag = "PythonScript" | "ConsoleVariables" | "StatCommands" | "ProjectSettings" | "Message";
 
 async function createData(tag:resourceTag, content:string) {
-    // clean
-    prisma.unrealRagResources.deleteMany({
-        where: { tag:tag, },
-    });
-    prisma.unrealRagEmbeddings.deleteMany({
-        where: { tag:tag, },
-    });
-
-    // Table: Resource
-    const resource = await prisma.unrealRagResources.create({data:{
-        tag:tag,
-        content:content,
-    }});
-
-    // Embedding
-    const embeddings = await generateEmbeddings(content);
-
-    // Table: Embedding
-    for (const embedding of embeddings) {
-        await prisma.$executeRaw`
-            INSERT INTO "UnrealRagEmbeddings" ("resourceId", "tag", "content", "embedding")
-            VALUES (
-                ${resource.id}, 
-                ${tag}, 
-                ${embedding.content}, 
-                ${embedding.embedding}::vector
-            )
+    try {
+        // Table: Resource
+        const id = cuid();
+        const result = await sql`
+            INSERT INTO proj_ai_query_unreal.unreal_rag_resources ("id", "tag", "content")
+            VALUES (${id}, ${tag}, ${content})
+            RETURNING "id", "tag", "content";
         `;
+        const resource = result.rows[0];
+
+        // Embedding
+        const embeddings = await generateEmbeddings(content);
+
+        // Table: Embedding
+        for (const embedding of embeddings) {
+            const embeddingId = cuid();
+            const embeddingArray:number[] = embedding.embedding.map(Number);
+            const embeddingArrText:string = JSON.stringify(embeddingArray);
+
+            // const query = `
+            //     INSERT INTO proj_ai_query_unreal.unreal_rag_embeddings ("id", "resource_id", "tag", "content", "embedding")
+            //     VALUES (${id}, ${resource.id}, ${tag}, ${embedding.content}, ${JSON.stringify(embeddingArray)}::vector );
+            // `;
+            console.log("embedding content: "+typeof embedding.content);
+            console.log("typeof embedding array: "+typeof embeddingArray);
+            console.log("typeof embedding array[0]: "+typeof embeddingArray[0]);
+            console.log("typeof embedding array text: "+typeof embeddingArrText);
+            console.log(embeddingArrText);
+            await sql`
+                INSERT INTO proj_ai_query_unreal.unreal_rag_embeddings ("id", "resource_id", "tag", "content", "embedding")
+                VALUES (${embeddingId}, ${resource.id}, ${tag}, ${embedding.content}, ${embeddingArrText} );
+            `;
+        }
+    } catch (error) {
+        // void error;
+        console.log("create data: " + error);
     }
 }
 
 async function createResourcePythonScripts() {
     const filePath = path.join(process.cwd(), "resources", "unreal_python_json.json");
-    return;
 
     try {
         const data = await fs.promises.readFile(filePath, "utf8");
@@ -65,7 +74,6 @@ async function createResourcePythonScripts() {
                     .replace(/\\n/g, "")
                     .replace(/\\t/g, "")
                     .replace(/\\r/g, "");
-                console.log(functionText);
                 await createData("PythonScript", functionText);
             }
         }
@@ -80,15 +88,21 @@ async function createResourceConsoleVariables() {
         const data = await fs.promises.readFile(filePath, "utf8");
         const jsonData = JSON.parse(data);
 
-        for (const jsonObject of jsonData) {
+        const length = jsonData.length;
+        let count = 0;
 
+        for (const jsonObject of jsonData) {
             const jsonText = JSON.stringify(jsonObject)
                 .replace(/\\n/g, "")
                 .replace(/\\t/g, "")
                 .replace(/\\r/g, "");
 
-            console.log(jsonText);
             await createData("ConsoleVariables", jsonText);
+            count = count + 1;
+            console.log("ConsoleVariables: " + count + "/" + length + " complete");
+
+            // temp 
+            break;
         }
     } catch (error) {
         console.error(error);
@@ -96,11 +110,12 @@ async function createResourceConsoleVariables() {
 }
 async function createResourceStatCommands() {
     const filePath = path.join(process.cwd(), "resources", "unreal_stat_command_json.json");
-    console.log(filePath);
+    void filePath;
 }
+
 async function createResourceProjectSettings() {
     const filePath = path.join(process.cwd(), "resources", "unreal_project_settings_json.json");
-    console.log(filePath);
+    void filePath;
 }
 
 export async function createResource({content}:{content: string}) {
@@ -108,8 +123,23 @@ export async function createResource({content}:{content: string}) {
 }
 
 export async function seedResource() {
-    await createResourcePythonScripts();
+
+    const tags = ["PythonScript" , "ConsoleVariables" , "StatCommands" , "ProjectSettings" , "Message"];
+    // clean
+    for (const tag of tags) {
+        await sql`
+            DELETE FROM proj_ai_query_unreal.unreal_rag_resources
+            WHERE "tag" = ${tag};
+        `;
+        await sql`
+            DELETE FROM proj_ai_query_unreal.unreal_rag_embeddings
+            WHERE "tag" = ${tag};
+        `;
+    }
+
+    // await createResourcePythonScripts();
     await createResourceConsoleVariables();
-    await createResourceStatCommands();
-    console.log("seedResource: succeed");
+    // await createResourceStatCommands();
+    // await createResourceProjectSettings();
+    console.log("===== seedResource: succeed");
 }

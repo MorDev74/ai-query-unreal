@@ -1,50 +1,69 @@
 "use client"
-import { useChat } from "ai/react";
+import { useState } from "react";
+import { Message } from "ai";
+import { querySimilarity } from "@/_lib/actions/QuerySimilarity";
+
+
+const queryExamples = [
+  "How to enable substrate material",
+  "Some console variable about Far Field",
+];
+
 export default function Home() {
-  const { messages, input, handleInputChange, handleSubmit } = useChat();
+  const [pending, setPending] = useState(false);
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if(pending) {
+      return;
+    }
+    const formData = new FormData(e.currentTarget);
+    const userMessage = formData.get("userMessage") as string;
+
+    setPending(true);
+    querySimilarity(userMessage);
+    setPending(false);
+  }
 
   const CreateResource = async () => {
     await fetch("/api/dev",{method:"GET"});
   }
 
   return (
-    <div className="flex flex-col w-full max-w-md py-24 mx-auto stretch">
+    <div className="flex flex-col max-w-md mx-auto py-24">
 
-      <div className="space-y-4">
-        {messages.map(m => (
-          <div key={m.id} className="whitespace-pre-wrap">
-            <div>
-              <div className="font-bold">{m.role}</div>
-              <p>
-                {m.content.length > 0 ? (
-                  m.content
-                ) : (
-                  <span className="italic font-light">
-                    {'calling tool: ' + m?.toolInvocations?.[0].toolName}
-                  </span>
-                )}
-              </p>
-            </div>
-          </div>
+      <form onSubmit={handleSubmit}>
+        <input 
+          type="text" 
+          name="userMessage"
+          disabled={pending}
+          className="border border-black p-1 rounded w-full"
+        />
+      </form>
+
+      <button 
+        onClick={CreateResource}
+        className="rounded m-2 p-2 bg-blue-500 text-white"
+      >Create Resources</button>
+
+      <div className="grid gap-2">
+        {queryExamples.map((message, index) => (
+          <div 
+            key={index}
+            className="rounded bg-gray-700 p-1 border"
+          >{message}</div>
         ))}
       </div>
 
-      <div className="flex flex-col">
-        <button
-          onClick={CreateResource}
-          className="fixed buttom-0 bg-blue-500 p-2 rounded-md"
-        >
-          Create Resource
-        </button>
-        <form onSubmit={handleSubmit}>
-          <input
-            className="fixed bottom-0 w-full max-w-md p-2 mb-8 border border-gray-300 rounded shadow-xl"
-            value={input}
-            placeholder="Say something..."
-            onChange={handleInputChange}
-          />
-        </form>
-      </div>
+
+    </div>
+  );
+}
+
+async function AssistantMessage({message}:{message: Message | undefined}) {
+  return (
+    <div>
+      {message?.content}
     </div>
   );
 }
