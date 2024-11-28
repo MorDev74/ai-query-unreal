@@ -28,15 +28,6 @@ async function createData(tag:resourceTag, content:string) {
             const embeddingArray:number[] = embedding.embedding.map(Number);
             const embeddingArrText:string = JSON.stringify(embeddingArray);
 
-            // const query = `
-            //     INSERT INTO proj_ai_query_unreal.unreal_rag_embeddings ("id", "resource_id", "tag", "content", "embedding")
-            //     VALUES (${id}, ${resource.id}, ${tag}, ${embedding.content}, ${JSON.stringify(embeddingArray)}::vector );
-            // `;
-            console.log("embedding content: "+typeof embedding.content);
-            console.log("typeof embedding array: "+typeof embeddingArray);
-            console.log("typeof embedding array[0]: "+typeof embeddingArray[0]);
-            console.log("typeof embedding array text: "+typeof embeddingArrText);
-            console.log(embeddingArrText);
             await sql`
                 INSERT INTO proj_ai_query_unreal.unreal_rag_embeddings ("id", "resource_id", "tag", "content", "embedding")
                 VALUES (${embeddingId}, ${resource.id}, ${tag}, ${embedding.content}, ${embeddingArrText} );
@@ -83,6 +74,7 @@ async function createResourcePythonScripts() {
 }
 async function createResourceConsoleVariables() {
     const filePath = path.join(process.cwd(), "resources", "unreal_console_variables_json.json");
+    const tag = "ConsoleVariables";
 
     try {
         const data = await fs.promises.readFile(filePath, "utf8");
@@ -97,9 +89,9 @@ async function createResourceConsoleVariables() {
                 .replace(/\\t/g, "")
                 .replace(/\\r/g, "");
 
-            await createData("ConsoleVariables", jsonText);
+            await createData(tag, jsonText);
             count = count + 1;
-            console.log("ConsoleVariables: " + count + "/" + length + " complete");
+            console.log(tag + ": " + count + "/" + length + " complete");
 
             // temp 
             break;
@@ -110,12 +102,52 @@ async function createResourceConsoleVariables() {
 }
 async function createResourceStatCommands() {
     const filePath = path.join(process.cwd(), "resources", "unreal_stat_command_json.json");
-    void filePath;
+    const tag = "StatCommands";
+    try {
+        const data = await fs.promises.readFile(filePath, "utf8");
+        const jsonData = JSON.parse(data);
+
+        const length = jsonData.length;
+        let count = 0;
+
+        for (const jsonObject of jsonData) {
+            const jsonText = JSON.stringify(jsonObject)
+                .replace(/\\n/g, "")
+                .replace(/\\t/g, "")
+                .replace(/\\r/g, "");
+
+            await createData(tag, jsonText);
+            count = count + 1;
+            console.log(tag + ": " + count + "/" + length + " complete");
+        }
+    } catch (error) {
+        console.error(error);
+    }
 }
 
 async function createResourceProjectSettings() {
     const filePath = path.join(process.cwd(), "resources", "unreal_project_settings_json.json");
-    void filePath;
+    const tag = "ProjectSettings";
+    try {
+        const data = await fs.promises.readFile(filePath, "utf8");
+        const jsonData = JSON.parse(data);
+
+        const length = jsonData.length;
+        let count = 0;
+
+        for (const jsonObject of jsonData) {
+            const jsonText = JSON.stringify(jsonObject)
+                .replace(/\\n/g, "")
+                .replace(/\\t/g, "")
+                .replace(/\\r/g, "");
+
+            await createData(tag, jsonText);
+            count = count + 1;
+            console.log(tag + ": " + count + "/" + length + " complete");
+        }
+    } catch (error) {
+        console.error(error);
+    }
 }
 
 export async function createResource({content}:{content: string}) {
@@ -124,16 +156,16 @@ export async function createResource({content}:{content: string}) {
 
 export async function seedResource() {
 
-    const tags = ["PythonScript" , "ConsoleVariables" , "StatCommands" , "ProjectSettings" , "Message"];
+    const tags = ["PythonScript", "ConsoleVariables", "StatCommands", "ProjectSettings", "Message"];
     // clean
     for (const tag of tags) {
         await sql`
-            DELETE FROM proj_ai_query_unreal.unreal_rag_resources
-            WHERE "tag" = ${tag};
+            DELETE FROM proj_ai_query_unreal.unreal_rag_embeddings
+            WHERE 'tag' = ${tag};
         `;
         await sql`
-            DELETE FROM proj_ai_query_unreal.unreal_rag_embeddings
-            WHERE "tag" = ${tag};
+            DELETE FROM proj_ai_query_unreal.unreal_rag_resources
+            WHERE 'tag' = ${tag};
         `;
     }
 

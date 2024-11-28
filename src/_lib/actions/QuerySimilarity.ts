@@ -2,9 +2,17 @@
 
 import { findRelevantContent } from "@/_lib/ai/embedding";
 
-export async function querySimilarity(question:string) {
-    const embeddingRows = await findRelevantContent(question);
+export async function querySimilarity(question:string,tag:string) {
+    let result:{tag:string, content:{name:string, similarity:number}[]} = {
+        tag: tag,
+        content: []
+    };
 
-    const { name,similarity } = embeddingRows;
-    console.log(`name: ${name}, similarity: ${similarity}`);
+    const embeddingRows = await findRelevantContent(question,tag);
+
+    embeddingRows.forEach(({ name, similarity }) => {
+        result.content.push({ name, similarity });
+    });
+
+    return result;
 }

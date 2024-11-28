@@ -1,13 +1,16 @@
 import { embed, embedMany } from "ai";
 import { sql } from '@vercel/postgres';
 // import { openai } from "@ai-sdk/openai";
-import { google } from "@ai-sdk/google";
+// import { google } from "@ai-sdk/google";
 import { ollama } from "ollama-ai-provider";
 import { EmbeddingModelV1Embedding } from '@ai-sdk/provider';
 
 const ollamaEmbeddingModel = ollama.embedding("nomic-embed-text", { maxEmbeddingsPerCall: 512 });
-const googleEmbeddingModel = google.textEmbeddingModel("text-embedding-004",{ outputDimensionality: 512 });
-const embeddingModel = process.env.NODE_ENV === "development" ? ollamaEmbeddingModel : googleEmbeddingModel;
+
+// const googleEmbeddingModel = google.textEmbeddingModel("text-embedding-004",{ outputDimensionality: 512 });
+// const embeddingModel = process.env.NODE_ENV === "development" ? ollamaEmbeddingModel : googleEmbeddingModel;
+
+const embeddingModel = ollamaEmbeddingModel;
 
 function generateChunksLength(input:string, maxLength:number): string[] {
     const chunks: string[] = [];
@@ -61,7 +64,6 @@ function extendVector({vector, targetLength}:{vector:number[], targetLength:numb
 export async function generateEmbeddings(input:string): 
         Promise<Array<{embedding: number[]; content:string}>>
 {
-    // const chunks = generateChunks(input);
     const chunks = generateChunksLength(input,512);
 
     const { embeddings }:{embeddings:EmbeddingModelV1Embedding[]} = await embedMany({
@@ -87,11 +89,11 @@ export async function generateEmbedding(value:string):Promise<number[]> {
     return embedding;
 }
 
-export async function findRelevantContent(userQuery: string) {
+export async function findRelevantContent(userQuery: string, tag: string) {
     const userQueryEmbedded = await generateEmbedding(userQuery);
     const extendedEmbedded = extendVector({ vector:userQueryEmbedded, targetLength:1536 })
     const similarityThreshold = 0.5;
-    const limit = 4;
+    const limit = 5;
 
     /*
     Ref:
@@ -120,12 +122,10 @@ export async function findRelevantContent(userQuery: string) {
             "content" AS "name",
             1 - ( "embedding" <=> ${extendedEmbeddedText} ) AS "similarity"
         FROM proj_ai_query_unreal.unreal_rag_embeddings
-        WHERE 1 - ( "embedding" <=> ${extendedEmbeddedText} ) > ${similarityThreshold}
+        WHERE 1 - ( "embedding" <=> ${extendedEmbeddedText} ) > ${similarityThreshold} AND "tag" = ${tag}
         ORDER BY "similarity" DESC
         LIMIT ${limit};
     `;
 
-    const similarGuides = result.rows[0];
-
-    return similarGuides;
+    return result.rows;
 }
