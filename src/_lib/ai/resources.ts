@@ -41,10 +41,14 @@ async function createData(tag:resourceTag, content:string) {
 
 async function createResourcePythonScripts() {
     const filePath = path.join(process.cwd(), "resources", "unreal_python_json.json");
+    const tag = "PythonScript";
 
     try {
         const data = await fs.promises.readFile(filePath, "utf8");
         const jsonData = JSON.parse(data);
+
+        const length = jsonData.length;
+        let count = 0;
 
         for (const jsonObject of jsonData) {
             const objectType = jsonObject.type;
@@ -65,7 +69,9 @@ async function createResourcePythonScripts() {
                     .replace(/\\n/g, "")
                     .replace(/\\t/g, "")
                     .replace(/\\r/g, "");
-                await createData("PythonScript", functionText);
+                await createData(tag, functionText);
+                count = count + 1;
+                console.log(tag + ": " + count + "/" + length + " complete");
             }
         }
     } catch (error) {
@@ -92,9 +98,6 @@ async function createResourceConsoleVariables() {
             await createData(tag, jsonText);
             count = count + 1;
             console.log(tag + ": " + count + "/" + length + " complete");
-
-            // temp 
-            break;
         }
     } catch (error) {
         console.error(error);

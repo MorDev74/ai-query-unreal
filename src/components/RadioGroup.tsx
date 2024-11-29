@@ -17,7 +17,10 @@ export function RadioGroup({
 
     return (
         <div className="flex flex-row justify-center m-2">
-            <div className="relative flex flex-row gap-1">
+            <div className="relative flex flex-row 
+                transition-all duration-500
+                gap-0 md:gap-1 lg:gap-2 xl:gap-3
+            ">
                 {optionList.map((optionInfo, index) => (
                     <div
                         key={index}
@@ -43,6 +46,7 @@ export function RadioGroup({
                             className={`border border-gray-300 px-4 py-2 cursor-pointer
                                 transition-all duration-500 ease-in-out
                                 font-bold
+                                text-sm md:text-sm lg:text-md xl:text-lg
                                 ${selectedOption === optionInfo.value
                                                     ? "text-emerald-500 bg-black hover:text-teal-200"
                                                     : "text-gray-300 bg-gray-900 hover:text-gray-500 hover:bg-black"}

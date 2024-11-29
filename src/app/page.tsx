@@ -40,7 +40,13 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col max-w-md mx-auto py-24 gap-2">
+    <div className="flex flex-col mx-auto py-12 gap-2
+      transition-all duration-300
+      max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl
+    ">
+
+      <div className="text-3xl font-bold text-white mb-8 w-full 
+      text-center">AI Query Unreal</div>
 
       <RadioGroup optionList={optionList} setOptionFunc={setSelectedOption}/>
 
