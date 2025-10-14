@@ -1,5 +1,5 @@
 import { embed, embedMany } from "ai";
-import { sql } from '@vercel/postgres';
+// import { sql } from '@vercel/postgres';
 // import { openai } from "@ai-sdk/openai";
 // import { google } from "@ai-sdk/google";
 import { ollama } from "ollama-ai-provider";
@@ -117,15 +117,16 @@ export async function findRelevantContent(userQuery: string, tag: string) {
 
     const extendedEmbeddedText:string = JSON.stringify(extendedEmbedded);
 
-    const result = await sql`
-        SELECT
-            "content" AS "name",
-            1 - ( "embedding" <=> ${extendedEmbeddedText} ) AS "similarity"
-        FROM proj_ai_query_unreal.unreal_rag_embeddings
-        WHERE 1 - ( "embedding" <=> ${extendedEmbeddedText} ) > ${similarityThreshold} AND "tag" = ${tag}
-        ORDER BY "similarity" DESC
-        LIMIT ${limit};
-    `;
+    // const result = await sql`
+    //     SELECT
+    //         "content" AS "name",
+    //         1 - ( "embedding" <=> ${extendedEmbeddedText} ) AS "similarity"
+    //     FROM proj_ai_query_unreal.unreal_rag_embeddings
+    //     WHERE 1 - ( "embedding" <=> ${extendedEmbeddedText} ) > ${similarityThreshold} AND "tag" = ${tag}
+    //     ORDER BY "similarity" DESC
+    //     LIMIT ${limit};
+    // `;
 
-    return result.rows;
+    // return result.rows;
+    return [];
 }

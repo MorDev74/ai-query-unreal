@@ -3,21 +3,32 @@
 import cuid from "cuid";
 import fs from "fs";
 import path from "path";
-import { sql } from '@vercel/postgres';
 import { generateEmbeddings } from "@/_lib/ai/embedding";
 
+
 type resourceTag = "PythonScript" | "ConsoleVariables" | "StatCommands" | "ProjectSettings" | "Message";
+
+async function cleanByTag(tag:resourceTag) {
+    // await sql`
+    //     DELETE FROM proj_ai_query_unreal.unreal_rag_embeddings
+    //     WHERE 'tag' = ${tag};
+    // `;
+    // await sql`
+    //     DELETE FROM proj_ai_query_unreal.unreal_rag_resources
+    //     WHERE 'tag' = ${tag};
+    // `;
+}
 
 async function createData(tag:resourceTag, content:string) {
     try {
         // Table: Resource
         const id = cuid();
-        const result = await sql`
-            INSERT INTO proj_ai_query_unreal.unreal_rag_resources ("id", "tag", "content")
-            VALUES (${id}, ${tag}, ${content})
-            RETURNING "id", "tag", "content";
-        `;
-        const resource = result.rows[0];
+        // const result = await sql`
+        //     INSERT INTO proj_ai_query_unreal.unreal_rag_resources ("id", "tag", "content")
+        //     VALUES (${id}, ${tag}, ${content})
+        //     RETURNING "id", "tag", "content";
+        // `;
+        // const resource = result.rows[0];
 
         // Embedding
         const embeddings = await generateEmbeddings(content);
@@ -28,10 +39,10 @@ async function createData(tag:resourceTag, content:string) {
             const embeddingArray:number[] = embedding.embedding.map(Number);
             const embeddingArrText:string = JSON.stringify(embeddingArray);
 
-            await sql`
-                INSERT INTO proj_ai_query_unreal.unreal_rag_embeddings ("id", "resource_id", "tag", "content", "embedding")
-                VALUES (${embeddingId}, ${resource.id}, ${tag}, ${embedding.content}, ${embeddingArrText} );
-            `;
+            // await sql`
+            //     INSERT INTO proj_ai_query_unreal.unreal_rag_embeddings ("id", "resource_id", "tag", "content", "embedding")
+            //     VALUES (${embeddingId}, ${resource.id}, ${tag}, ${embedding.content}, ${embeddingArrText} );
+            // `;
         }
     } catch (error) {
         // void error;
@@ -41,7 +52,8 @@ async function createData(tag:resourceTag, content:string) {
 
 async function createResourcePythonScripts() {
     const filePath = path.join(process.cwd(), "resources", "unreal_python_json.json");
-    const tag = "PythonScript";
+    const tag:resourceTag = "PythonScript";
+    await cleanByTag(tag);
 
     try {
         const data = await fs.promises.readFile(filePath, "utf8");
@@ -54,22 +66,24 @@ async function createResourcePythonScripts() {
             const objectType = jsonObject.type;
             const objectName = jsonObject.name;
 
-            let functionText = "";
             if (objectType === "class") {
                 for (let functionObject of jsonObject.functions) {
                     functionObject.owner = objectName;
-                    functionText = JSON.stringify(functionObject);
+                    const functionText = JSON.stringify(functionObject)
+                                            .replace(/\\n/g, "")
+                                            .replace(/\\t/g, "")
+                                            .replace(/\\r/g, "");
+                    await createData(tag, functionText);
                 }
+                count = count + 1;
+                console.log(tag + ": " + count + "/" + length + " complete");
             } else if (objectType === "function") {
-                functionText = JSON.stringify(jsonObject);
-            }
-
-            if (functionText) {
-                functionText = functionText
-                    .replace(/\\n/g, "")
-                    .replace(/\\t/g, "")
-                    .replace(/\\r/g, "");
+                const functionText = JSON.stringify(jsonObject)
+                                        .replace(/\\n/g, "")
+                                        .replace(/\\t/g, "")
+                                        .replace(/\\r/g, "");
                 await createData(tag, functionText);
+
                 count = count + 1;
                 console.log(tag + ": " + count + "/" + length + " complete");
             }
@@ -80,7 +94,8 @@ async function createResourcePythonScripts() {
 }
 async function createResourceConsoleVariables() {
     const filePath = path.join(process.cwd(), "resources", "unreal_console_variables_json.json");
-    const tag = "ConsoleVariables";
+    const tag:resourceTag = "ConsoleVariables";
+    await cleanByTag(tag);
 
     try {
         const data = await fs.promises.readFile(filePath, "utf8");
@@ -105,7 +120,9 @@ async function createResourceConsoleVariables() {
 }
 async function createResourceStatCommands() {
     const filePath = path.join(process.cwd(), "resources", "unreal_stat_command_json.json");
-    const tag = "StatCommands";
+    const tag:resourceTag = "StatCommands";
+    await cleanByTag(tag);
+
     try {
         const data = await fs.promises.readFile(filePath, "utf8");
         const jsonData = JSON.parse(data);
@@ -130,7 +147,9 @@ async function createResourceStatCommands() {
 
 async function createResourceProjectSettings() {
     const filePath = path.join(process.cwd(), "resources", "unreal_project_settings_json.json");
-    const tag = "ProjectSettings";
+    const tag:resourceTag = "ProjectSettings";
+    await cleanByTag(tag);
+
     try {
         const data = await fs.promises.readFile(filePath, "utf8");
         const jsonData = JSON.parse(data);
@@ -159,21 +178,8 @@ export async function createResource({content}:{content: string}) {
 
 export async function seedResource() {
 
-    const tags = ["PythonScript", "ConsoleVariables", "StatCommands", "ProjectSettings", "Message"];
-    // clean
-    for (const tag of tags) {
-        await sql`
-            DELETE FROM proj_ai_query_unreal.unreal_rag_embeddings
-            WHERE 'tag' = ${tag};
-        `;
-        await sql`
-            DELETE FROM proj_ai_query_unreal.unreal_rag_resources
-            WHERE 'tag' = ${tag};
-        `;
-    }
-
-    // await createResourcePythonScripts();
-    await createResourceConsoleVariables();
+    await createResourcePythonScripts();
+    // await createResourceConsoleVariables();
     // await createResourceStatCommands();
     // await createResourceProjectSettings();
     console.log("===== seedResource: succeed");

@@ -36,6 +36,7 @@ export default function Home() {
   }
 
   const CreateResource = async () => {
+    // await EmbedText();
     await fetch("/api/dev/create-resources", { method: "GET" });
   }
 
@@ -46,7 +47,7 @@ export default function Home() {
     ">
 
       <div className="text-3xl font-bold text-white mb-8 w-full 
-      text-center">AI Query Unreal</div>
+      text-center">AI Query Unreal (5.4)</div>
 
       <RadioGroup optionList={optionList} setOptionFunc={setSelectedOption}/>
 
